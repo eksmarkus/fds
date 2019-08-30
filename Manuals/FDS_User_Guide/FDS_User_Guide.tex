@@ -1584,6 +1584,7 @@ When specifying an initial density it is important to recognize the order in whi
 This example is a case where we have over-defined the problem. Since the temperature is computed from the equation of state using the specified density, the specified temperature will not, in general, satisfy the equation of state, and FDS will overwrite the specified temperature.
 
 \section{Heat Release Rate Per Unit Volume (HRRPUV)}
+\label{info:init_hrrpuv}
 
 The {\ct INIT} line may also be used to specify a volumetric heat source term. For example,
 \begin{lstlisting}
@@ -1591,6 +1592,15 @@ The {\ct INIT} line may also be used to specify a volumetric heat source term. F
 \end{lstlisting}
 indicates that the region bounded by {\ct XB} shall generate 1000~kW/m$^3$. This feature is mainly useful for diagnostics, or to model a fire in a very simple way.
 
+You may specify a time ramp for volumetric heat source via {\ct RAMP\_Q}.  For example,
+\begin{lstlisting}
+&RAMP ID='q1', T=0,  F=0/
+&RAMP ID='q1', T=60, F=1/
+&INIT XB=0.0,0.1,0.0,0.025,0.0,0.1, HRRPUV=1000., RAMP_Q='q1' /
+\end{lstlisting}
+ramps the heat source up from 0 to 1000~kW/m$^3$ linearly over 60 seconds.
+
+The volumetric heat source may be applied both to the gas phase and a solid using 3D heat transfer (see Sec.~\ref{sec:heat_sources}).
 
 \section{Velocity Field}
 \label{info:velo_restart}
@@ -1621,6 +1631,13 @@ If multiple meshes are involved, it is assumed that the {\ct CSVF} lines are pro
 &CSVF UVWFILE='CHID_t001_m002.csv' /
 &MISC PROJECTION=.TRUE. /
 \end{lstlisting}
+The above approach is deprecated because it may be cumbersome if a large number of meshes is needed.  To overcome this issue, you may set {\ct PER\_MESH=T}, which will append the mesh number and {\ct .csv} to the {\ct UVWFILE} string.  For example, if you had 16 meshes you can use
+\begin{lstlisting}
+&CSVF UVWFILE='CHID_t001_m', PER_MESH=T /
+&MISC PROJECTION=.TRUE. /
+\end{lstlisting}
+and FDS will read {\ct CHID\_t001\_m001.csv} through {\ct CHID\_t001\_m016.csv} in the order of the {\ct MESH} lines (note that a {\ct MULT} line for the meshes may also be used).  Note that the the {\ct UVWFILE} string should contain the ``{\ct m}'' (if it exists) as this is not automatically appended.
+
 It is recommended that you also specify {\ct PROJECTION=.TRUE.} on {\ct MISC} if the specified velocity field does not satisfy the divergence constraint to machine precision on a staggered grid (this may not even be true if an analytical solution to the Navier-Stokes equations is sampled at the staggered velocity component locations).
 
 
@@ -2794,6 +2811,8 @@ You can also use {\ct INTERNAL\_HEAT\_SOURCE} in \si{kW/m^3} on the {\ct OBST} l
 &SURF ID='SPHERE', HT3D=.TRUE./
 &OBST XB=..., HT3D=.TRUE., MATL_ID='orange', SURF_ID='SPHERE', INTERNAL_HEAT_SOURCE=200./
 \end{lstlisting}
+
+Both {\ct HRRPUV} and {\ct INTERNAL\_HEAT\_SOURCE} may be use a time ramp via {\ct RAMP\_Q} on their respective {\ct INIT} or {\ct OBST} lines.
 
 \subsubsection*{Internal Radiation}
 \label{sec:radiation_parameters}
@@ -8529,6 +8548,8 @@ For a gas phase scalar quantity defined at the center of each grid cell, $\phi_{
 \be \frac{1}{N} \; \sum_{ijk} \phi_{ijk}  \ee
 over the cells that are included in the specified volume bounded by {\ct XB}. Note that this statistic is only appropriate for gas phase quantities. Note also that you must specify a volume to sum over via the coordinate parameters, {\ct XB}, which can extend into multiple meshes.
 
+If you are interested in the average value over a plane, give the {\ct XB} volume a small thickness to either side of the plane location encompassing the storage locations of the values of interest.  For example, scalars like temperatures live at the cell center, so locate the plane at the cell center and add a small delta to either side of that plane for the {\ct XB}.
+
 \subsubsection{Volume-Weighted Mean}
 
 For a gas phase scalar quantity, $\phi(x,y,z)$, {\ct SPATIAL\_STATISTIC='VOLUME MEAN'} produces the discrete analog of
@@ -9432,7 +9453,8 @@ properties be specified as well. Simply prescribing as many properties as possib
 \multicolumn{5}{|c|}{{\ct CSVF} (Comma Delimited Output Files)} \\
 \hline \hline
 \endhead
-%{\ct CSVFILE}         & Character      & Section~\ref{info:??}                &            &     \\ \hline
+%{\ct CSVFILE}         & Character      & Section~\ref{info:??}                &            &        \\ \hline
+{\ct PER\_MESH}       & Logical        & Section~\ref{info:velo_restart}      &            & .FALSE. \\ \hline
 {\ct UVWFILE}         & Character      & Section~\ref{info:velo_restart}      &            &     \\ \hline
 \end{longtable}
 
@@ -9775,6 +9797,7 @@ $\Delta t$={\ct T\_END-T\_BEGIN}
 {\ct PART\_ID}                    & Character         & Section~\ref{info:initial_droplets}           &                &               \\ \hline
 {\ct PARTICLE\_WEIGHT\_FACTOR}    & Real              & Section~\ref{info:initial_droplets}           &                & 1.            \\ \hline
 {\ct RADIUS}                      & Real              & Section~\ref{info:initial_droplets}           & m              &               \\ \hline
+{\ct RAMP\_Q}                     & Character         & Section~\ref{info:init_hrrpuv}                &                &               \\ \hline
 {\ct SHAPE}                       & Character         & Section~\ref{info:initial_droplets}           &                & {\ct 'BLOCK'} \\ \hline
 {\ct SPEC\_ID(N)}                 & Character Array   & Section~\ref{info:INIT}                       &                &               \\ \hline
 {\ct TEMPERATURE}                 & Real              & Section~\ref{info:INIT}                       & \si{\degree C} & {\ct TMPA}    \\ \hline
